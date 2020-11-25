@@ -291,10 +291,10 @@ public class Driver {
 	// --------------------------------------------------------
 	public static Connection getConnection() {
 		try {
-			String driver = "com.mysql.cj.jdbc.Driver";
-			String url = "jdbc:mysql://localhost:3306/finalProject";
-			String username = "root";
-			String password = "marinetktk";
+			String driver = "";
+			String url = "";
+			String username = "";
+			String password = "";
 			Class.forName(driver);
 
 			Connection conn = DriverManager.getConnection(url, username, password);
