@@ -1,5 +1,5 @@
 import java.sql.Connection;
-import java.sql.Date;
+
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -7,8 +7,6 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Scanner;
-
-import javax.swing.plaf.synth.SynthToggleButtonUI;
 
 public class Driver {
 //	private static final String ADD_BOOK_QUERY = 
@@ -21,6 +19,7 @@ public class Driver {
 //		book(conn);
 //		createTable();
 //		post();
+//		showAllCourse();
 //		showAllCourse();
 		start();
 	}
@@ -42,11 +41,15 @@ public class Driver {
 		String hello = input.nextLine();
 		switch (hello.toLowerCase()) {
 		case "t":
-			getCourseByT();
+			int tea = getYourId();
+			helloTeacher(tea);
+			getCourseByT(tea);
 			printStudent();
 			break;
 		case "s":
-			studentMenu(getYourId());
+			int stu = getYourId();
+			helloStudent(stu);
+			studentMenu(stu);
 			break;
 		default:
 			System.out.println("Error");
@@ -63,26 +66,26 @@ public class Driver {
 	}
 
 //	show all courses
-	public static ArrayList<String> showAllCourse() {
+	public static void showAllCourse() {
 		try {
 			Connection con = getConnection();
 			PreparedStatement statement = con.prepareStatement("SELECT courseId,courseName,date FROM Course");
-
-			ResultSet result = statement.executeQuery();
-
-			ArrayList<String> array = new ArrayList<String>();
+			ResultSet result = statement
+					.executeQuery("SELECT c.courseName, c.date , c.courseId, t.firstName, t.lastName \n"
+							+ "FROM Teacher t \n" + "INNER JOIN Course c \n" + "ON t.teacherId = c.teacherId");
+			System.out.println("All course");
 			while (result.next()) {
 				System.out.print(result.getString("courseId"));
 				System.out.print(" ");
 				System.out.print(result.getString("courseName"));
 				System.out.print(" ");
 				System.out.println(result.getString("date"));
+				System.out.println("Teacher : " + result.getString("firstName") + " " + result.getString("lastName"));
+				System.out.println();
 			}
-			System.out.println("All records have been selected.");
-			return array;
 		} catch (Exception e) {
 			System.out.println(e);
-			return null;
+
 		}
 	}
 
@@ -93,7 +96,8 @@ public class Driver {
 			ResultSet result = statement.executeQuery();
 			while (result.next()) {
 				if (result.getString("studentId").equals(String.valueOf(teacherId))) {
-					System.out.println("Hello " + result.getString("firstName") + " " + result.getString("lastName") + " !");
+					System.out.println(
+							"Hello " + result.getString("firstName") + " " + result.getString("lastName") + " !");
 				}
 			}
 		} catch (Exception e) {
@@ -101,58 +105,59 @@ public class Driver {
 		}
 	}
 
-	public static ArrayList<String> printStudent() {
+	public static void printStudent() {
 		Scanner input = new Scanner(System.in);
 		System.out.println("Which course do you want to check? Please enter course ID");
 		String hello = input.nextLine();
 		System.out.println("Student list");
 		try {
 			Connection con = getConnection();
-
 			PreparedStatement statement = con.prepareStatement("SELECT * FROM Booking");
 			ResultSet result = statement.executeQuery(
 					"SELECT s.firstName, s.lastName, c.courseName ,s.studentId,b.courseId FROM Student s INNER JOIN Booking b ON b.studentId = s.studentId INNER JOIN Course c ON b.courseId = c.courseId");
-
-			ArrayList<String> array = new ArrayList<String>();
+			Boolean nothing = false;
 			while (result.next()) {
 				if (result.getString("courseId").equals(hello)) {
-					System.out.println(result.getString("studentId") + " " + result.getString("firstName") + " "
-							+ result.getString("lastName"));
-					System.out.println();
+					System.out.println("student ID = " + result.getString("studentId") + " : "
+							+ result.getString("firstName") + " " + result.getString("lastName"));
+					nothing = true;
 				}
 			}
-			return array;
+			if (nothing == false) {
+				System.out.println("This course doesn't have any student.");
+			}
 		} catch (Exception e) {
 			System.out.println(e);
-			return null;
 		} finally {
-			printStudent();
 		}
+		printStudent();
 	}
 
-	public static ArrayList<String> getCourseByT() {
-		Scanner input = new Scanner(System.in);
-		System.out.println("Please enter your ID.");
-		String hello = input.nextLine();
-		helloTeacher(Integer.valueOf(hello));
+	public static void getCourseByT(int teacherId) {
+//		Scanner input = new Scanner(System.in);
+//		System.out.println("Please enter your ID.");
+//		String hello = input.nextLine();
+//		helloTeacher(Integer.valueOf(hello));
 		System.out.println("Your class list");
 		try {
 			Connection con = getConnection();
 			PreparedStatement statement = con.prepareStatement("SELECT * FROM Course");
 			ResultSet result = statement.executeQuery();
-
-			ArrayList<String> array = new ArrayList<String>();
+			Boolean nothing = false;
 			while (result.next()) {
-				if (result.getString("teacherId").equals(hello)) {
+				if (result.getString("teacherId").equals(String.valueOf(teacherId))) {
 
 					System.out.println(result.getString("courseId") + " " + result.getString("courseName") + " "
 							+ result.getString("date"));
+					nothing = true;
 				}
 			}
-			return array;
+			if (nothing == false) {
+				System.out.println("You don't have any class.");
+			}
 		} catch (Exception e) {
 			System.out.println(e);
-			return null;
+
 		}
 	}
 //--------------------------------------------------------
@@ -169,7 +174,10 @@ public class Driver {
 		printDate();
 		System.out.println("Which date do you want to book? Please enter course ID.");
 		int hello = input.nextInt();
-
+		System.out.println(howManyStudent(hello) + " students already booked.");
+if (howManyStudent(hello) == 6) {
+	System.out.println("This class is full. You can not book.");
+} else {
 		final int var1 = hello;
 		final int var2 = studentId;
 		try {
@@ -177,10 +185,29 @@ public class Driver {
 			PreparedStatement posted = con
 					.prepareStatement("INSERT INTO Booking(courseId,studentId)VALUES('" + var1 + "','" + var2 + "')");
 			posted.executeUpdate();
+			System.out.println("Book success!");
 		} catch (Exception e) {
 			System.out.println(e);
-		} finally {
+		} 
+	}
+	}
 
+	public static int howManyStudent(int courseId) {
+		try {
+			Connection con = getConnection();
+			PreparedStatement statement = con.prepareStatement("SELECT * FROM Booking");
+			ResultSet result = statement.executeQuery();
+		int howmany = 0;
+			while (result.next()) {
+				if (result.getString("courseId").equals(String.valueOf(courseId))) {
+					howmany +=1;
+				}
+			}
+			return howmany;
+
+		} catch (Exception e) {
+			System.out.println(e);
+			return 0;
 		}
 	}
 
@@ -193,9 +220,10 @@ public class Driver {
 		final int var2 = studentId;
 		try {
 			Connection con = getConnection();
-			PreparedStatement posted = con.prepareStatement("DELETE FROM Booking Where courseId = '" + var1 + "'");
+			PreparedStatement posted = con.prepareStatement(
+					"DELETE FROM Booking Where courseId = '" + var1 + "' AND studentId = '" + var2 + "'");
 			posted.executeUpdate();
-//			studentMenu(studentId);
+			System.out.println("Cansel success!");
 		} catch (Exception e) {
 			System.out.println(e);
 		} finally {
@@ -203,7 +231,6 @@ public class Driver {
 	}
 
 	public static void studentMenu(int studentId) {
-		helloStudent(studentId);
 		Scanner input = new Scanner(System.in);
 		System.out.println("Please enter b(book new class) or c(cansel class) or s(see your class) e(exit).");
 		String hello = input.nextLine();
@@ -214,6 +241,7 @@ public class Driver {
 			break;
 		case "c":
 			cansel(studentId);
+
 			studentMenu(studentId);
 			break;
 		case "s":
@@ -238,36 +266,40 @@ public class Driver {
 			PreparedStatement statement = con.prepareStatement("SELECT * FROM Course");
 			ResultSet result = statement.executeQuery();
 			while (result.next()) {
-				if (result.getString("courseName").equals(hello)) {
+				if (result.getString("courseName").equals(hello.toLowerCase())) {
 					System.out.println(result.getString("courseId") + " " + result.getString("courseName") + " "
 							+ result.getString("date"));
 				}
 			}
-		} catch (Exception e) {
-			System.out.println(e);
+		} catch (
 
+		Exception e) {
+			System.out.println(e);
 		}
 	}
 
-	public static ArrayList<String> getCourseByS(int studentId) {
-		System.out.println("Your class list");
+	public static void getCourseByS(int studentId) {
 		try {
 			Connection con = getConnection();
 			PreparedStatement statement = con.prepareStatement("SELECT * FROM Booking");
 			ResultSet result = statement.executeQuery(
 					"SELECT s.firstName, s.lastName, c.courseName, c.date ,s.studentId,b.courseId FROM Student s INNER JOIN Booking b ON b.studentId = s.studentId INNER JOIN Course c ON b.courseId = c.courseId");
-			ArrayList<String> array = new ArrayList<String>();
+			Boolean nothing = false;
+
 			while (result.next()) {
 				if (result.getString("studentId").equals((String.valueOf(studentId)))) {
 					System.out.println(result.getString("courseId") + " " + result.getString("courseName") + " "
 							+ result.getString("date"));
-//					studentMenu(studentId);
+					nothing = true;
 				}
 			}
-			return array;
+			if (nothing == false) {
+				System.out.println("no reservation");
+			}
+
 		} catch (Exception e) {
 			System.out.println(e);
-			return null;
+
 		} finally {
 
 		}
@@ -280,7 +312,8 @@ public class Driver {
 			ResultSet result = statement.executeQuery();
 			while (result.next()) {
 				if (result.getString("studentId").equals(String.valueOf(studentId))) {
-					System.out.println("Hello " + result.getString("firstName") + " " + result.getString("lastName") + " !");
+					System.out.println(
+							"Hello " + result.getString("firstName") + " " + result.getString("lastName") + " !");
 				}
 			}
 		} catch (Exception e) {
@@ -293,7 +326,7 @@ public class Driver {
 		try {
 			String driver = "";
 			String url = "";
-			String username = "";
+			String username = ";
 			String password = "";
 			Class.forName(driver);
 
@@ -302,7 +335,6 @@ public class Driver {
 			return conn;
 
 		} catch (Exception e) {
-
 			System.out.println(e);
 			System.out.println("no");
 		}
